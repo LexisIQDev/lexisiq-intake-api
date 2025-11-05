@@ -1,0 +1,20 @@
+name: Neon Nightly Backup
+on:
+  schedule:
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install pg_dump
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Dump database
+        env:
+          NEON_DSN: ${{ secrets.NEON_DSN }}
+        run: pg_dump "$NEON_DSN" -Fc -f backup.dump
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: neon-backup
+          path: backup.dump
