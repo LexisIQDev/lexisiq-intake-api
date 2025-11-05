@@ -1,0 +1,9 @@
+{
+  "emotions": ["Happiness","Sadness","Anger","Fear","Disgust","Surprise","Love","Joy","Trust","Anticipation","Guilt","Shame","Embarrassment","Pride","Envy","Jealousy","Relief","Hope","Anxiety","Compassion","Frustration","Loneliness","Gratitude","Awe","Contempt"],
+  "strategy": {
+    "default": {"default_empathy": 2, "modes": ["supportive","validating","direct"]},
+    "Anxiety": {"default_empathy": 3, "modes": ["validating","supportive","direct"]},
+    "Fear": {"default_empathy": 3, "modes": ["validating","supportive","direct"]},
+    "Anger": {"default_empathy": 2, "modes": ["supportive","direct","validating"]}
+  }
+}

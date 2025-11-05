@@ -1,0 +1,14 @@
+.git
+.gitignore
+Dockerfile
+fly.toml
+node_modules
+dist
+build
+tmp
+*.log
+**/.DS_Store
+**/.Spotlight-V100
+**/.Trashes
+**/.fseventsd
+**/.TemporaryItems

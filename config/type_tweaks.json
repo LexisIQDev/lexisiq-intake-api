@@ -1,0 +1,32 @@
+{
+  "tweaks": {
+    "Hit-and-Run Accident": {"keywords": ["hit-and-run","hit and run","fled","left the scene","driver ran"], "tone_bias": ["reassuring","grounding"], "empathy_delta": 2},
+    "Wrongful Death": {"keywords": ["passed away","fatal","died","death"], "tone_bias": ["compassionate","reassuring"], "empathy_delta": 2},
+    "Nursing Home Abuse": {"keywords": ["abuse","assault in facility","bruises","restraints","neglected"], "tone_bias": ["supportive","validating"], "empathy_delta": 2},
+    "Medical Malpractice": {"keywords": ["malpractice","misdiagnosed","surgical error","anesthesia","hospital negligence","doctor error"], "tone_bias": ["gentle","precise"], "empathy_delta": 1},
+    "Nursing Home Neglect": {"keywords": ["bedsores","dehydration","falls in facility","unsanitary","neglect"], "tone_bias": ["supportive","reassuring"], "empathy_delta": 1},
+    "General Product Liability": {"keywords": ["defect","defective","design defect","manufacturing defect","failure to warn","recall"], "tone_bias": ["clear","concise"], "empathy_delta": 1},
+    "Defective Product Injury": {"keywords": ["defective product","exploded","malfunction","overheated","burned","shock"], "tone_bias": ["clear","concise"], "empathy_delta": 1},
+    "Commercial Truck Accident": {"keywords": ["18-wheeler","semi","tractor trailer","log book","hours of service","jackknifed"], "tone_bias": ["clear","thorough"], "empathy_delta": 1},
+    "Delivery Truck Accident": {"keywords": ["amazon van","ups","fedex","delivery driver","package truck"], "tone_bias": ["clear","concise"], "empathy_delta": 1},
+    "Uber Accident": {"keywords": ["uber","rideshare","app ride","uber driver"], "tone_bias": ["reassuring","clear"], "empathy_delta": 1},
+    "Lyft Accident": {"keywords": ["lyft","rideshare","app ride","lyft driver"], "tone_bias": ["reassuring","clear"], "empathy_delta": 1},
+    "Rideshare Accident": {"keywords": ["rideshare","platform insurance","tno"], "tone_bias": ["reassuring","clear"], "empathy_delta": 1},
+    "Pedestrian Accident": {"keywords": ["crosswalk","on foot","walker","struck while walking"], "tone_bias": ["supportive","gentle"], "empathy_delta": 1},
+    "Bicycle Accident": {"keywords": ["bike","bicycle","dooring","driver opened door","cycling"], "tone_bias": ["supportive","clear"], "empathy_delta": 1},
+    "Motorcycle Accident": {"keywords": ["motorcycle","laid the bike down","lane splitting","helmet"], "tone_bias": ["supportive","clear"], "empathy_delta": 1},
+    "Slip Injury": {"keywords": ["slipped","wet floor","spill","no warning","no sign"], "tone_bias": ["reassuring","clear"], "empathy_delta": 1},
+    "Trip Injury": {"keywords": ["tripped","uneven","crack","raised sidewalk","loose mat"], "tone_bias": ["reassuring","clear"], "empathy_delta": 1},
+    "Fall Injury": {"keywords": ["fell","fall","stairs","handrail","balcony"], "tone_bias": ["reassuring","supportive"], "empathy_delta": 1},
+    "Dog Bite": {"keywords": ["dog bite","bit by dog","animal control","rabies"], "tone_bias": ["supportive","clear"], "empathy_delta": 1},
+    "Dog Attack": {"keywords": ["dog attack","aggressive dog","off leash"], "tone_bias": ["supportive","reassuring"], "empathy_delta": 1},
+    "Animal Attack": {"keywords": ["animal attack","bite","scratch"], "tone_bias": ["supportive","reassuring"], "empathy_delta": 1},
+    "Construction Site Injury": {"keywords": ["scaffold","ladder","power tool","osha","fall from height","hard hat"], "tone_bias": ["clear","professional"], "empathy_delta": 1},
+    "3rd-party Negligence (Not Workers’ Compensation)": {"keywords": ["third party","not workers comp","contractor negligence"], "tone_bias": ["professional","clear"], "empathy_delta": 1},
+    "Property Negligence": {"keywords": ["premises","unsafe property","broken handrail","poor lighting","broken glass"], "tone_bias": ["clear","concise"], "empathy_delta": 1},
+    "Known Negligence": {"keywords": ["knew about","notice","prior incident","reported before"], "tone_bias": ["clear","precise"], "empathy_delta": 1},
+    "Retail Store Injury": {"keywords": ["store","aisle","retail","employee knew","manager"], "tone_bias": ["clear","concise"], "empathy_delta": 1},
+    "Grocery Slip & Fall": {"keywords": ["grocery","produce","spill","freezer leak","stocking"], "tone_bias": ["reassuring","clear"], "empathy_delta": 1},
+    "Car Accident": {"keywords": ["rear-ended","t-boned","intersection","airbag","police report","adjuster"], "tone_bias": ["professional","clear"], "empathy_delta": 1}
+  }
+}

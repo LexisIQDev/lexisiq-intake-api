@@ -1,0 +1,10 @@
+{
+  "defaults": {"when":"default","target_tokens":80,"max_sentences":4},
+  "rules": [
+    {"when":"distress_disclosed","target_tokens":120,"max_sentences":6},
+    {"when":"collecting_fact","target_tokens":60,"max_sentences":3},
+    {"when":"medical_context","target_tokens":80,"max_sentences":4},
+    {"when":"closure_summary","target_tokens":80,"max_sentences":4},
+    {"when":"explain_next_step","target_tokens":70,"max_sentences":3}
+  ]
+}

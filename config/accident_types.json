@@ -1,0 +1,32 @@
+{
+  "types": [
+    "Car Accident",
+    "Commercial Truck Accident",
+    "Delivery Truck Accident",
+    "Uber Accident",
+    "Lyft Accident",
+    "Rideshare Accident",
+    "Pedestrian Accident",
+    "Bicycle Accident",
+    "Motorcycle Accident",
+    "Slip Injury",
+    "Trip Injury",
+    "Fall Injury",
+    "Retail Store Injury",
+    "Grocery Slip & Fall",
+    "Dog Bite",
+    "Dog Attack",
+    "Animal Attack",
+    "Hit-and-Run Accident",
+    "Wrongful Death",
+    "Medical Malpractice",
+    "Nursing Home Neglect",
+    "Nursing Home Abuse",
+    "Defective Product Injury",
+    "General Product Liability",
+    "Construction Site Injury",
+    "3rd-party Negligence (Not Workers’ Compensation)",
+    "Property Negligence",
+    "Known Negligence"
+  ]
+}

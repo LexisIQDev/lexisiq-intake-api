@@ -1,0 +1,10 @@
+{
+  "stages": ["opening","discovery","qualification","disclosure","closure"],
+  "tone": {
+    "opening": ["warm","reassuring","clear"],
+    "discovery": ["professional","curious","clear"],
+    "qualification": ["professional","concise","clear"],
+    "disclosure": ["gentle","validating","supportive"],
+    "closure": ["reassuring","summarizing","next-steps"]
+  }
+}
