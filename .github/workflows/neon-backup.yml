@@ -7,8 +7,15 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - name: Install pg_dump
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Add PGDG repo
+        run: |
+          sudo bash -c 'echo "deb http://apt.postgresql.org/pub/repos/apt noble-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          wget -qO- https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+      - name: Install pg_dump 17
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+          pg_dump --version
       - name: Dump database
         env:
           NEON_DSN: ${{ secrets.NEON_DSN }}
