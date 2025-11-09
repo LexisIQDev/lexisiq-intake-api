@@ -1,9 +1,217 @@
 {
-  "emotions": ["Happiness","Sadness","Anger","Fear","Disgust","Surprise","Love","Joy","Trust","Anticipation","Guilt","Shame","Embarrassment","Pride","Envy","Jealousy","Relief","Hope","Anxiety","Compassion","Frustration","Loneliness","Gratitude","Awe","Contempt"],
+  "emotions": [
+    "Happiness",
+    "Sadness",
+    "Anger",
+    "Fear",
+    "Disgust",
+    "Surprise",
+    "Love",
+    "Joy",
+    "Trust",
+    "Anticipation",
+    "Guilt",
+    "Shame",
+    "Embarrassment",
+    "Pride",
+    "Envy",
+    "Jealousy",
+    "Relief",
+    "Hope",
+    "Anxiety",
+    "Compassion",
+    "Frustration",
+    "Loneliness",
+    "Gratitude",
+    "Awe",
+    "Contempt"
+  ],
   "strategy": {
-    "default": {"default_empathy": 2, "modes": ["supportive","validating","direct"]},
-    "Anxiety": {"default_empathy": 3, "modes": ["validating","supportive","direct"]},
-    "Fear": {"default_empathy": 3, "modes": ["validating","supportive","direct"]},
-    "Anger": {"default_empathy": 2, "modes": ["supportive","direct","validating"]}
+    "default": {
+      "default_empathy": 2,
+      "modes": [
+        "supportive",
+        "validating",
+        "direct"
+      ]
+    },
+    "Anxiety": {
+      "default_empathy": 3,
+      "modes": [
+        "validating",
+        "supportive",
+        "direct"
+      ]
+    },
+    "Fear": {
+      "default_empathy": 3,
+      "modes": [
+        "validating",
+        "supportive",
+        "direct"
+      ]
+    },
+    "Anger": {
+      "default_empathy": 2,
+      "modes": [
+        "supportive",
+        "direct",
+        "validating"
+      ]
+    },
+    "Happiness": {
+      "default_empathy": 1,
+      "modes": [
+        "neutral",
+        "supportive"
+      ]
+    },
+    "Sadness": {
+      "default_empathy": 3,
+      "modes": [
+        "validating",
+        "supportive"
+      ]
+    },
+    "Disgust": {
+      "default_empathy": 2,
+      "modes": [
+        "direct",
+        "neutral"
+      ]
+    },
+    "Surprise": {
+      "default_empathy": 2,
+      "modes": [
+        "supportive",
+        "neutral"
+      ]
+    },
+    "Love": {
+      "default_empathy": 2,
+      "modes": [
+        "supportive",
+        "neutral"
+      ]
+    },
+    "Joy": {
+      "default_empathy": 1,
+      "modes": [
+        "neutral",
+        "supportive"
+      ]
+    },
+    "Trust": {
+      "default_empathy": 2,
+      "modes": [
+        "neutral",
+        "supportive"
+      ]
+    },
+    "Anticipation": {
+      "default_empathy": 2,
+      "modes": [
+        "supportive",
+        "neutral"
+      ]
+    },
+    "Guilt": {
+      "default_empathy": 3,
+      "modes": [
+        "validating",
+        "supportive"
+      ]
+    },
+    "Shame": {
+      "default_empathy": 3,
+      "modes": [
+        "validating",
+        "supportive"
+      ]
+    },
+    "Embarrassment": {
+      "default_empathy": 3,
+      "modes": [
+        "validating",
+        "supportive"
+      ]
+    },
+    "Pride": {
+      "default_empathy": 1,
+      "modes": [
+        "neutral",
+        "supportive"
+      ]
+    },
+    "Envy": {
+      "default_empathy": 2,
+      "modes": [
+        "supportive",
+        "direct"
+      ]
+    },
+    "Jealousy": {
+      "default_empathy": 2,
+      "modes": [
+        "supportive",
+        "direct"
+      ]
+    },
+    "Relief": {
+      "default_empathy": 1,
+      "modes": [
+        "neutral",
+        "supportive"
+      ]
+    },
+    "Hope": {
+      "default_empathy": 2,
+      "modes": [
+        "supportive",
+        "neutral"
+      ]
+    },
+    "Compassion": {
+      "default_empathy": 2,
+      "modes": [
+        "supportive",
+        "neutral"
+      ]
+    },
+    "Frustration": {
+      "default_empathy": 3,
+      "modes": [
+        "supportive",
+        "direct"
+      ]
+    },
+    "Loneliness": {
+      "default_empathy": 3,
+      "modes": [
+        "validating",
+        "supportive"
+      ]
+    },
+    "Gratitude": {
+      "default_empathy": 1,
+      "modes": [
+        "neutral",
+        "supportive"
+      ]
+    },
+    "Awe": {
+      "default_empathy": 1,
+      "modes": [
+        "neutral",
+        "supportive"
+      ]
+    },
+    "Contempt": {
+      "default_empathy": 2,
+      "modes": [
+        "direct",
+        "neutral"
+      ]
+    }
   }
 }

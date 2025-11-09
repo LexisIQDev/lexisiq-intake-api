@@ -19,7 +19,7 @@ type Matrix struct {
 }
 
 type ToneByStage struct {
-	Stages []string           `json:"stages"`
+	Stages []string            `json:"stages"`
 	Tone   map[string][]string `json:"tone"`
 }
 
@@ -98,19 +98,12 @@ func readJSON[T any](p string) (T, error) {
 }
 
 func (p *Planner) ClassifyWhen(userText string, stage Stage) string {
-	lt := strings.ToLower(userText)
-
-	switch {
-	case stage == "closure":
+	// Model-first fallback: only a very light default if the model omits constraints.
+	switch stage {
+	case "closure":
 		return "closure_summary"
-	case stage == "qualification":
+	case "qualification":
 		return "explain_next_step"
-	case regexp.MustCompile(`(?i)\b(suicid|panic|terrified|cry|hurt so bad|can't cope|overwhelmed)\b`).MatchString(lt):
-		return "distress_disclosed"
-	case regexp.MustCompile(`(?i)\b(name|email|phone|date|address|dob|policy|claim|police report|report number)\b`).MatchString(lt):
-		return "collecting_fact"
-	case regexp.MustCompile(`(?i)\b(er|emergency room|urgent care|hospital|doctor|mri|x-?ray|therapy|treatment)\b`).MatchString(lt):
-		return "medical_context"
 	default:
 		return "default"
 	}
@@ -221,10 +214,14 @@ func GuessStage(history []string) Stage {
 func (p Plan) SystemDirectives(business string) string {
 	return fmt.Sprintf(
 		`You are an intake assistant for %s.
-Follow these constraints:
+Follow these constraints (LLM-driven):
 - Empathy level: %d (0=neutral, 4=high). Mode: %s.
 - Tone: %s.
-- Keep to <= %d sentences and ~%d tokens unless safety or clarity require more.
+- Begin with a brief, personalized acknowledgment in the user's own words; avoid templates.
+- Vary wording naturally across turns; avoid repetition.
+- Choose response length dynamically; use <= %d sentences and ~%d tokens as guidance, not hard limits, unless safety/clarity require more.
+- Decide contact timing: set Ask_Contact="true" only when appropriate (user readiness or stage progression). Do not ask prematurely.
+- Semantically detect injuries, body regions, mechanism, red flags, and time since incident from paraphrases; include them in "Detected".
 - Never provide legal advice; gather facts, reassure, and explain next steps briefly.`,
 		business, p.EmpathyLevel, p.EmpathyMode, strings.Join(p.TonePreset, ", "),
 		p.MaxSentences, p.TargetTokens,
@@ -258,19 +255,6 @@ func Validate() error {
 }
 
 // ===== Smart sanitization =====
-
-var (
-	reLeadingFirstPerson = regexp.MustCompile(`(?i)^\s*(i'm|i am|i was|i have|i've|i had|i|my)\b`)
-	reHealthIncident     = regexp.MustCompile(`(?i)\b(doctor|hospital|er|urgent care|insurance|policy|claim|crash|accident|collision|fall|balcony|injur(?:y|ies)|pain|ambulance|police report|therapy|treatment|x-?ray|mri)\b`)
-	reSeenDoctorNeg      = regexp.MustCompile(`(?i)\b(i\s+have\s+not|i\s+haven't)\s+seen\s+a\s+doctor\b`)
-	reSeenDoctorPos      = regexp.MustCompile(`(?i)\b(i\s+have\s+seen|i\s+saw|i'?ve\s+seen)\s+a\s+doctor\b`)
-	reNoInsurance        = regexp.MustCompile(`(?i)\b(i\s+do\s+not\s+have|i\s+don't\s+have)\s+(health\s+)?insurance\b`)
-	reInvolvedCrash      = regexp.MustCompile(`(?i)\b(i\s+was\s+in|i\s+was\s+involved\s+in)\s+(a\s+)?(crash|accident|collision|fall)\b`)
-	reFellOffBalcony     = regexp.MustCompile(`(?i)\b(i\s+fell\s+off\s+(the\s+)?balcony)\b`)
-	reCantSleepAnx       = regexp.MustCompile(`(?i)\b(i\s+can'?t\s+sleep).*(anxious|anxiety)|\b(i'?m\s+very\s+anxious)\b`)
-	rePhonePolicyInfo    = regexp.MustCompile(`(?i)\b(my\s+phone\s+is|my\s+policy\s+number\s+is|i\s+don'?t\s+have\s+the\s+policy)\b`)
-)
-
 func SmartSanitizeAssistant(msg string) string {
 	orig := strings.TrimSpace(msg)
 	lower := strings.ToLower(orig)

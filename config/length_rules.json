@@ -1,10 +1,14 @@
 {
-  "defaults": {"when":"default","target_tokens":80,"max_sentences":4},
+  "defaults": { "when": "default", "target_tokens": 70, "max_sentences": 3 },
   "rules": [
-    {"when":"distress_disclosed","target_tokens":120,"max_sentences":6},
-    {"when":"collecting_fact","target_tokens":60,"max_sentences":3},
-    {"when":"medical_context","target_tokens":80,"max_sentences":4},
-    {"when":"closure_summary","target_tokens":80,"max_sentences":4},
-    {"when":"explain_next_step","target_tokens":70,"max_sentences":3}
+    { "when": "collecting_fact",      "target_tokens": 55,  "max_sentences": 3 },
+    { "when": "explain_next_step",    "target_tokens": 65,  "max_sentences": 3 },
+    { "when": "medical_context",      "target_tokens": 75,  "max_sentences": 4 },
+    { "when": "clarifying_confusion", "target_tokens": 75,  "max_sentences": 4 },
+    { "when": "treatment_update",     "target_tokens": 75,  "max_sentences": 4 },
+    { "when": "severity_assessment",  "target_tokens": 95,  "max_sentences": 4 },
+    { "when": "emotional_reassurance","target_tokens": 95,  "max_sentences": 4 },
+    { "when": "distress_disclosed",   "target_tokens": 100, "max_sentences": 4 },
+    { "when": "closure_summary",      "target_tokens": 70,  "max_sentences": 3 }
   ]
 }

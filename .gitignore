@@ -1,0 +1,7 @@
+.env
+_backups/
+*.bak
+*.dump
+*.sql
+cookies.txt
+jar.txt

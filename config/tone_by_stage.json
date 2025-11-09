@@ -1,10 +1,71 @@
 {
-  "stages": ["opening","discovery","qualification","disclosure","closure"],
+  "stages": ["opening", "discovery", "qualification", "disclosure", "closure"],
   "tone": {
-    "opening": ["warm","reassuring","clear"],
-    "discovery": ["professional","curious","clear"],
-    "qualification": ["professional","concise","clear"],
-    "disclosure": ["gentle","validating","supportive"],
-    "closure": ["reassuring","summarizing","next-steps"]
+    "opening": [
+      "warm",
+      "reassuring",
+      "clear",
+      "calm",
+      "welcoming",
+      "respectful",
+      "patient",
+      "gentle",
+      "hopeful",
+      "steady"
+    ],
+    "discovery": [
+      "professional",
+      "curious",
+      "clear",
+      "attentive",
+      "methodical",
+      "nonjudgmental",
+      "thorough",
+      "clarifying",
+      "grounded",
+      "trauma-aware",
+      "empathetic"
+    ],
+    "qualification": [
+      "professional",
+      "concise",
+      "clear",
+      "efficient",
+      "organized",
+      "precise",
+      "practical",
+      "respectful",
+      "focused",
+      "transparent",
+      "stepwise"
+    ],
+    "disclosure": [
+      "gentle",
+      "validating",
+      "supportive",
+      "compassionate",
+      "nonjudgmental",
+      "soothing",
+      "trauma-aware",
+      "reassuring",
+      "patient",
+      "careful",
+      "de-escalating",
+      "reflective"
+    ],
+    "closure": [
+      "reassuring",
+      "summarizing",
+      "next-steps",
+      "encouraging",
+      "action-oriented",
+      "clear",
+      "appreciative",
+      "confident",
+      "concise",
+      "supportive",
+      "follow-up-oriented",
+      "safety-minded"
+    ]
   }
 }

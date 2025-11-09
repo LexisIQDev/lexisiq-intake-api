@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/rand"
-
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
@@ -17,18 +16,20 @@ import (
 	"time"
 
 	"github.com/elgs/gojq"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
-
-	_ "github.com/jackc/pgx/v5/stdlib" // Postgres driver (Neon-compatible)
-
 	openai "github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
+
+	"lexisiq-intake-api/internal/ei"
+	"lexisiq-intake-api/internal/learn"
 )
 
 var (
 	ctx            = context.Background()
 	oaClient       openai.Client
 	db             *sql.DB
+	mem            *learn.Global
 	business       = "personal injury intake"
 	sessionManager = &SessionManager{sessions: make(map[string]*Session)}
 )
@@ -45,6 +46,12 @@ type ChatResponse struct {
 	ConversationComplete bool        `json:"conversationComplete"`
 	ClientProfile        interface{} `json:"clientProfile,omitempty"`
 	SessionID            string      `json:"sessionId"`
+
+	// NEW: expose model internals for debugging/telemetry
+	InternalAssessment   interface{} `json:"Internal_Assessment,omitempty"`
+	Detected             interface{} `json:"Detected,omitempty"`
+	Stage                string      `json:"Stage,omitempty"`
+	AskContact           string      `json:"Ask_Contact,omitempty"`
 }
 
 type Session struct {
@@ -150,39 +157,53 @@ func startCleanupTask() {
 	}()
 }
 
-// ------------ Init (env, OpenAI, DB) ------------
-func init() {
-	_ = godotenv.Load(".env")
-
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" {
-		log.Println("WARNING: OPENAI_API_KEY is not set")
-	}
-	oaClient = openai.NewClient(option.WithAPIKey(apiKey))
-
-	dsn := os.Getenv("NEON_DSN")
-	if dsn == "" {
-		log.Println("WARNING: NEON_DSN is not set (DB persistence disabled)")
-	} else {
-		var err error
-		db, err = sql.Open("pgx", dsn)
-		if err != nil {
-			log.Fatalf("open db: %v", err)
-		}
-		if err := db.Ping(); err != nil {
-			log.Fatalf("ping db: %v", err)
-		}
-	}
-
-	startCleanupTask()
-}
-
 // ------------ main ------------
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
+
+	_ = godotenv.Load()
+
+	dsn := os.Getenv("NEON_DSN")
+	openaiKey := os.Getenv("OPENAI_API_KEY")
+
+	// --- DB (optional but preferred) ---
+	if dsn == "" {
+		log.Printf("NEON_DSN not set; starting without DB (memory-only mode)")
+	} else {
+		var derr error
+		db, derr = sql.Open("pgx", dsn)
+		if derr != nil {
+			log.Printf("db open error; starting without DB: %v", derr)
+		} else {
+			ctxPing, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			if perr := db.PingContext(ctxPing); perr != nil {
+				log.Printf("db ping error; starting without DB: %v", perr)
+				_ = db.Close()
+				db = nil
+			}
+		}
+	}
+
+	// --- OpenAI ---
+	if openaiKey == "" {
+		log.Printf("OPENAI_API_KEY not set; requests to /chat will fail until you set it")
+	} else {
+		oaClient = openai.NewClient(option.WithAPIKey(openaiKey))
+	}
+
+	// --- Global memory only if DB is present ---
+	if db != nil {
+		mem = learn.NewGlobal(db)
+	} else {
+		mem = nil
+	}
+
+	// Start background session cleanup
+	startCleanupTask()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -191,17 +212,18 @@ func main() {
 	})
 	mux.HandleFunc("POST /chat", HandleChat)
 
-	log.Printf("API server starting on :%s", port)
-	log.Fatal(http.ListenAndServe(":"+port, enableCORS(mux)))
+	log.Printf("API server starting on 0.0.0.0:%s", port)
+	if err := http.ListenAndServe("0.0.0.0:"+port, enableCORS(mux)); err != nil {
+		log.Fatalf("server failed: %v", err)
+	}
 }
 
 // ------------ HTTP/CORS helpers ------------
 func enableCORS(next http.Handler) http.Handler {
-	// Allow your prod domain(s) + localhost dev
 	allowed := map[string]bool{
-		"https://californialawyermatch.com": true,
-		"http://localhost:8080":             true,
-		"http://localhost:3003":             true,
+		"https://californialawyermatch.com":  true,
+		"http://localhost:8080":              true,
+		"http://localhost:3003":              true,
 		"https://lexisiq-intake-api.fly.dev": true,
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -250,6 +272,84 @@ func saveMessage(sessionID, role, content string) error {
 	return err
 }
 
+// ------------ Early-contact + length helpers ------------
+func explicitContactCue(s string) bool {
+	s = strings.ToLower(s)
+	pats := []string{
+		`call me`, `can you call`, `contact me`, `reach me`,
+		`my number is`, `phone is`, `email is`, `here'?s my email`,
+		`how do i talk to`, `someone contact me`, `speak to a lawyer`,
+		`urgent`, `asap`,
+	}
+	for _, p := range pats {
+		if regexp.MustCompile(p).MatchString(s) {
+			return true
+		}
+	}
+	return false
+}
+
+func highDistress(llm any) bool {
+	m, ok := llm.(map[string]interface{})
+	if !ok {
+		return false
+	}
+	ia, ok := m["Internal_Assessment"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+	intensity, _ := ia["intensity"].(float64)
+	emotion, _ := ia["emotion"].(string)
+	emotion = strings.ToLower(emotion)
+	if intensity >= 0.85 {
+		switch emotion {
+		case "anxiety", "fear", "sadness", "shame", "loneliness":
+			return true
+		}
+	}
+	return false
+}
+
+func enforceMaxSentences(s string, max int) string {
+	if max <= 0 {
+		return s
+	}
+	seps := []rune{'.', '?', '!'}
+	var out []string
+	start := 0
+	for i, r := range s {
+		if len(out) >= max {
+			break
+		}
+		for _, sep := range seps {
+			if r == sep {
+				out = append(out, strings.TrimSpace(s[start:i+1]))
+				start = i + 1
+				break
+			}
+		}
+	}
+	if len(out) < max && start < len(s) {
+		rest := strings.TrimSpace(s[start:])
+		if rest != "" {
+			out = append(out, rest)
+		}
+	}
+	return strings.TrimSpace(strings.Join(out, " "))
+}
+
+func approxTruncateTokens(s string, target int) string {
+	if target <= 0 {
+		return s
+	}
+	limit := int(float64(target) * 1.3)
+	words := strings.Fields(s)
+	if len(words) <= limit {
+		return s
+	}
+	return strings.Join(words[:limit], " ")
+}
+
 // ------------ /chat ------------
 func HandleChat(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
@@ -258,6 +358,11 @@ func HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("Method=%s Path=%s Content-Type=%s", r.Method, r.URL.Path, r.Header.Get("Content-Type"))
+
+	if os.Getenv("OPENAI_API_KEY") == "" {
+		sendJSONError(w, "LLM not configured (missing OPENAI_API_KEY)", http.StatusServiceUnavailable)
+		return
+	}
 
 	// Get/Create session
 	var session *Session
@@ -282,9 +387,9 @@ func HandleChat(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Inputs: chat message + OPTIONAL first-intake param
-	userMessage := r.FormValue("message")
-	accidentType := r.FormValue("accidentType") // optional seed; everything else is chat-only now
+	// Inputs
+	userMessage := strings.TrimSpace(r.FormValue("message"))
+	accidentType := r.FormValue("accidentType")
 
 	// Seed only if provided and no prior messages
 	if accidentType != "" {
@@ -302,12 +407,37 @@ func HandleChat(w http.ResponseWriter, r *http.Request) {
 		_ = saveMessage(sessionID, "user", userMessage)
 	}
 
+	// ---- Global memory retrieval (temporary system context) ----
+	var injected bool
+	if mem != nil && userMessage != "" {
+		recs, _ := mem.Retrieve(ctx, userMessage, 8)
+		if len(recs) > 0 {
+			var b strings.Builder
+			b.WriteString("Known relevant global context:\n")
+			for _, rr := range recs {
+				b.WriteString("- ")
+				b.WriteString(rr.Content)
+				b.WriteString("\n")
+			}
+			_ = sessionManager.AddMessage(sessionID, "system", b.String())
+			injected = true
+		}
+	}
+
 	// Generate assistant reply
 	llmResponse, err := generateLLMResponse(session)
 	if err != nil {
+		if injected && len(session.Messages) > 0 && session.Messages[len(session.Messages)-1].Role == "system" {
+			session.Messages = session.Messages[:len(session.Messages)-1]
+		}
 		log.Printf("generateLLMResponse: %v", err)
 		sendJSONError(w, fmt.Sprintf("Error generating response: %v", err), http.StatusInternalServerError)
 		return
+	}
+
+	// Remove temporary context
+	if injected && len(session.Messages) > 0 && session.Messages[len(session.Messages)-1].Role == "system" {
+		session.Messages = session.Messages[:len(session.Messages)-1]
 	}
 
 	// Extract client-visible message
@@ -322,9 +452,92 @@ func HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// EI tone prefix
+	respStr = strings.TrimSpace(ei.TonePrefix(userMessage) + " " + respStr)
+
+	// ---- Pull optional model internals for visibility ----
+	var internalAssessment interface{}
+	var detected interface{}
+	var stageOut, askContactOut string
+
+	if ia, _ := llmResponse.Query("Internal_Assessment"); ia != nil {
+		internalAssessment = ia
+		if m, ok := ia.(map[string]interface{}); ok {
+			// stage
+			if s, ok := m["stage"].(string); ok && s != "" {
+				stageOut = s
+			}
+			// ask_contact (string OR bool)
+			switch v := m["ask_contact"].(type) {
+			case string:
+				if v != "" {
+					askContactOut = strings.ToLower(v)
+				}
+			case bool:
+				if v {
+					askContactOut = "true"
+				} else {
+					askContactOut = "false"
+				}
+			}
+			// LLM-driven length constraints (optional)
+			if v, ok := m["max_sentences"].(float64); ok && v > 0 {
+				respStr = enforceMaxSentences(respStr, int(v))
+			}
+			if v, ok := m["target_tokens"].(float64); ok && v > 0 {
+				respStr = approxTruncateTokens(respStr, int(v))
+			}
+		}
+	}
+
+	// Top-level fallbacks
+	if st, _ := llmResponse.Query("Stage"); st != nil {
+		if s, ok := st.(string); ok && s != "" {
+			stageOut = s
+		}
+	}
+	if ac, _ := llmResponse.Query("Ask_Contact"); ac != nil {
+		switch v := ac.(type) {
+		case string:
+			if v != "" {
+				askContactOut = strings.ToLower(v)
+			}
+		case bool:
+			if v {
+				askContactOut = "true"
+			} else {
+				askContactOut = "false"
+			}
+		}
+	}
+	if det, _ := llmResponse.Query("Detected"); det != nil {
+		detected = det
+	}
+
+	// Contact request logic (model-driven)
+	hasName := session.ClientData["name"] != ""
+	hasEmail := session.ClientData["email"] != ""
+	hasPhone := session.ClientData["phoneNumber"] != ""
+	needContact := !(hasName && hasEmail && hasPhone)
+
+	askContact := false
+	if askContactOut != "" {
+		askContact = (askContactOut == "true")
+	}
+	if askContact && needContact {
+		respStr += " Before we continue, could you share your name, email, and phone so we can follow up if needed?"
+	}
+
 	// Persist assistant reply
 	_ = sessionManager.AddMessage(sessionID, "assistant", respStr)
 	_ = saveMessage(sessionID, "assistant", respStr)
+
+	// Distill & store global learnings (user-agnostic)
+	if mem != nil && userMessage != "" && respStr != "" {
+		if err := mem.DistillAndStore(ctx, sessionID, userMessage, respStr); err != nil {
+			log.Printf("learn.DistillAndStore error: %v", err)
+		}
+	}
 
 	// Update any profile fields model inferred
 	if cp, _ := llmResponse.Query("Client_Profile"); cp != nil {
@@ -337,7 +550,7 @@ func HandleChat(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Completion gate: require name/email/phone in ClientData, but acquired via chat now
+	// Completion gate
 	isComplete := false
 	if flag, err := llmResponse.Query("Conversation_Complete"); err == nil {
 		if s, ok := flag.(string); ok && s == "true" {
@@ -353,7 +566,12 @@ func HandleChat(w http.ResponseWriter, r *http.Request) {
 		Message:              respStr,
 		ConversationComplete: isComplete,
 		SessionID:            sessionID,
+		InternalAssessment:   internalAssessment,
+		Detected:             detected,
+		Stage:                stageOut,
+		AskContact:           askContactOut,
 	}
+
 	if cp, _ := llmResponse.Query("Client_Profile"); cp != nil {
 		resp.ClientProfile = cp
 	}
@@ -368,7 +586,6 @@ func generateLLMResponse(session *Session) (*gojq.JQ, error) {
 		userQuery = session.Messages[n-1].Content
 	}
 
-	// Conversation and inline client data
 	conversationContext := formatConversationHistory(session.Messages)
 	if len(session.ClientData) > 0 {
 		conversationContext += "\nExisting Client Information:\n"
@@ -379,39 +596,47 @@ func generateLLMResponse(session *Session) (*gojq.JQ, error) {
 		}
 	}
 
-	sys := fmt.Sprintf(`You are an empathetic %s intake assistant. Ask brief, focused questions to gather details, but do not give legal advice.`, business) + `
-Tone & EI rules:
-- Be warm, validating, and professional.
-- Reflect the user's emotion in 1 short phrase before your follow-up question (e.g., "I’m sorry that was so stressful.").
-- Keep replies concise (2–3 sentences), then exactly one follow-up question.
-- Never offer medical or legal conclusions; only guide intake.
+	sys := fmt.Sprintf(`You are an empathetic %s intake assistant. Do not give legal advice.`, business) + `
+LLM-only behavior (no templates, no regex heuristics):
+- Derive empathy and wording from the user's own words. Avoid canned phrases.
+- Detect emotion and severity semantically; scale empathy accordingly.
+- Choose tone and response length dynamically; use tone_by_stage.json and length_rules.json as guidance, not hard limits.
+- Ask exactly one concise follow-up question unless safety/clarity needs more.
+- Decide contact timing yourself; set Ask_Contact="true" only when appropriate (readiness, next-step need, or user intent). Do not ask prematurely.
+- Use the Detected object for semantic extraction (injuries, body regions, severity, mechanism, red_flags) from paraphrases (e.g., "shoulder's been throbbing", "can barely move", "back's been off since the crash").
 
-IMPORTANT: Always capture the client's full name, email, and phone during the flow.
-`
-
-	jsonInstruction := `
-Return ONLY a single JSON object with these keys:
+Return ONLY one JSON object with these keys:
 - "Client_Response" (string)
-- "Internal_Assessment" (object)
-- "Conversation_Management" (object)
-- "Client_Profile" (object)
+- "Internal_Assessment" (object; include: emotion, intensity [0..1], stage, max_sentences, target_tokens, ask_contact)
+- "Conversation_Management" (object; optional stage hints)
+- "Client_Profile" (object; optional inferred fields)
 - "Case_Summary" (string)
 - "Conversation_Complete" (string: "true" or "false")
+- "Detected" (object; include semantic fields):
+    - injuries: string[]                 // free-text, semantic (e.g., "neck stiffness", "shoulder throbbing")
+    - body_regions: string[]             // normalized broad regions (e.g., "neck","shoulder","back","head")
+    - pain_severity: number              // 0..1
+    - mechanism: string[]                // e.g., "rear-end", "t-bone", "fall", "pedestrian"
+    - red_flags: string[]                // e.g., "loss of consciousness","head strike","numbness","weakness","anticoagulants"
+    - time_since_incident: string        // free-text (e.g., "last night","yesterday 10pm")
+    - treatment_status: string           // e.g., "no care yet","saw ER","has PCP follow-up"
 
 Rules:
-- Respond ONLY with valid JSON (no markdown, no code fences).
-- Ensure commas between all keys. Do not leave trailing commas.
+- Output must be valid JSON (no markdown, no code fences).
+- Always include "Detected" with all keys present; use empty arrays/strings when unknown.
+- Ensure proper commas and no trailing commas.
 `
 
+
 	fullPrompt := fmt.Sprintf(
-		"User Message:\n%s\n\nConversation Context:\n%s\n\nFollow the JSON schema and rules strictly.",
+		"User Message:\n%s\n\nConversation Context:\n%s\n\nFollow the schema and rules strictly.",
 		userQuery, conversationContext,
 	)
 
 	resp, err := oaClient.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
 		Model: openai.ChatModelGPT4o,
 		Messages: []openai.ChatCompletionMessageParamUnion{
-			openai.SystemMessage(sys + "\n\n" + jsonInstruction),
+			openai.SystemMessage(sys),
 			openai.UserMessage(fullPrompt),
 		},
 	})
@@ -441,10 +666,8 @@ Rules:
 
 // ------------ Utilities ------------
 func repairJSON(s string) string {
-	// fix missing comma between Case_Summary and Conversation_Complete
 	reMissingComma := regexp.MustCompile(`("Case_Summary"\s*:\s*"(?:[^"\\]|\\.)*")\s*("Conversation_Complete")`)
 	s = reMissingComma.ReplaceAllString(s, `$1, $2`)
-	// strip trailing commas before } or ]
 	reTrailing := regexp.MustCompile(`,\s*([}\]])`)
 	s = reTrailing.ReplaceAllString(s, `$1`)
 	return strings.TrimSpace(s)

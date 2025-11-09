@@ -6,7 +6,7 @@ require (
 	github.com/elgs/gojq v0.0.0-20230628214826-df5c4045598e
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/joho/godotenv v1.5.1
-	github.com/openai/openai-go/v3 v3.7.0
+	github.com/openai/openai-go/v3 v3.8.1
 )
 
 require (
